@@ -1,23 +1,19 @@
 import UIKit
 
 public enum Alpacka {
-    /** An object for packing items into a containing area.
-     
-     ```
-     let packer = Packer<MyObjectThatConformsToSized>()
-     packer.pack()
-     
-     ```
-     */
-    
+    /// An object for packing items into a containing area.
     public struct Packer<Item> where Item: Hashable, Item: Sized {
-        /// Pack items into a containing area.
-        ///
-        /// Overflowing items will be added to the `.overFlow` property. Calling `pack(_:in:)` will clear this overflow array so store anything that you need to keep track of, or make a new `Packer` object before attempting to pack again.
-        /// - Parameters:
-        ///   - items: Hashable, sized items that can be packed into a containing area.
-        ///   - size: The container to arrange items within.
-        /// - Returns: A dictionary with your items as keys, and their proposed origin relative to the container.
+        
+        /**
+         Pack items into a containing area.
+         
+         Switch on result to check for overflow.
+         
+         - Parameters:
+         - items: Hashable, sized items that can be packed into a containing area.
+         - size: The container to arrange items within.
+         - Returns: `.success([Item: CGPoint])` or `.overFlow([Item: CGPoint], overFlow: [Item])` depending on whether or not all items fit in the space using Alpacka's algorithm.
+         */
         public mutating func pack(_ items: [Item], in size: CGSize) -> Result {
             var packed: Section<Item> = .space(Size(size))
             var overFlow = [Item]()
