@@ -25,7 +25,7 @@ public enum Alpacka {
                 guard let attempt = packed.traverseAndPlace(item) else {
                     overFlow.append(item)
                     if packed.areaUsed() >= Size(size).area {
-                        overFlow.append(contentsOf: sorted[index...])
+                        overFlow.append(contentsOf: sorted[(index + 1)...])
                         break
                     }
                     continue
@@ -72,7 +72,9 @@ public enum Alpacka {
                 itemsToMutate = packed
                 overFlow = over
             }
-            overFlow.forEach { items.remove(at: items.firstIndex(of: $0)!) }
+            overFlow.forEach {
+                items.remove(at: items.firstIndex(of: $0)!)
+            }
             items.updateEach { item in
                 guard let point = itemsToMutate[item] else { return }
                 item[keyPath: origin] = point

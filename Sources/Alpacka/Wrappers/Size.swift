@@ -14,6 +14,9 @@ internal struct Size {
     var area: Double {
         width * height
     }
+    var cgSize: CGSize {
+        CGSize(width: width, height: height)
+    }
     init(_ size: CGSize) {
         width = Double(size.width)
         height = Double(size.height)
