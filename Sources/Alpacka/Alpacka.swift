@@ -68,6 +68,8 @@ public enum Alpacka {
             return result
         }
         
+        public init() {}
+        
         public enum Result {
             case success(_ packedItems: [Item: CGPoint])
             case overFlow(_ packedItems: [Item: CGPoint], overFlow: [Item])
