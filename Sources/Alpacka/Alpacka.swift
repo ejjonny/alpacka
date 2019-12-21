@@ -72,9 +72,7 @@ public enum Alpacka {
                 itemsToMutate = packed
                 overFlow = over
             }
-            overFlow.forEach {
-                items.remove(at: items.firstIndex(of: $0)!)
-            }
+            items = Array(Set(items).subtracting(Set(overFlow)))
             items.updateEach { item in
                 guard let point = itemsToMutate[item] else { return }
                 item[keyPath: origin] = point
