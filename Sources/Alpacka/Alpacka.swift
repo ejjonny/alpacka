@@ -17,13 +17,15 @@ public enum Alpacka {
         public func pack(_ items: [Item], in size: CGSize) -> Result {
             var packed: Section<Item> = .space(Size(size))
             var overFlow = [Item]()
+            var added = [Item]()
             items.lazy.sorted { first, second in
                 first.size.height > second.size.height
             }.forEach { item in
                 guard let attempt = packed.traverseAndPlace(item) else { overFlow.append(item) ; return }
                 packed = attempt
+                added.append(item)
             }
-            let packedDict = items.reduce([Item: CGPoint]()) { current, next in
+            let packedDict = added.reduce([Item: CGPoint]()) { current, next in
                 guard let origin = packed.origin(next) else { assert(false) ; return current }
                 var dict = current
                 dict[next] = origin.cgPoint
