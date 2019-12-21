@@ -1,3 +1,3 @@
 # Alpacka
 
-A description of this package.
+A tiny packing package
