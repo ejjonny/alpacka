@@ -11,6 +11,9 @@ import UIKit
 internal struct Size {
     let width: Double
     let height: Double
+    var area: Double {
+        width * height
+    }
     init(_ size: CGSize) {
         width = Double(size.width)
         height = Double(size.height)

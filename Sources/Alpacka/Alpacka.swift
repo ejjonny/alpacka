@@ -18,10 +18,18 @@ public enum Alpacka {
             var packed: Section<Item> = .space(Size(size))
             var overFlow = [Item]()
             var added = [Item]()
-            items.lazy.sorted { first, second in
+            let sorted = items.sorted { first, second in
                 first.size.height > second.size.height
-            }.forEach { item in
-                guard let attempt = packed.traverseAndPlace(item) else { overFlow.append(item) ; return }
+            }
+            for (item, index) in zip(sorted, sorted.indices) {
+                guard let attempt = packed.traverseAndPlace(item) else {
+                    overFlow.append(item)
+                    if packed.areaUsed() >= Size(size).area {
+                        overFlow.append(contentsOf: sorted[index...])
+                        break
+                    }
+                    continue
+                }
                 packed = attempt
                 added.append(item)
             }
@@ -80,24 +88,4 @@ public enum Alpacka {
             case overFlow(_ packedItems: [Item: CGPoint], overFlow: [Item])
         }
     }
-}
-
-public func nut() {
-    struct Thing: Hashable, Sized {
-        var packingSize: CGSize {
-            return CGSize(width: 0, height: 0)
-        }
-        var origin: CGPoint = CGPoint(x: 0, y: 0)
-
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(origin.x)
-            hasher.combine(origin.y)
-        }
-    }
-    var items = [
-        Thing(),
-        Thing()
-    ]
-    var packer = Alpacka.Packer<Thing>()
-    packer.pack(&items, origin: \.origin, in: CGSize(width: 100, height: 100))
 }

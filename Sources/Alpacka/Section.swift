@@ -50,4 +50,19 @@ internal indirect enum Section<Item> where Item: Hashable, Item: Sized {
         }
         return nil
     }
+    
+    internal func areaUsed() -> Double {
+        self.allChildren().reduce(0.0) { current, next in
+            current + next.size.width * next.size.height
+        }
+    }
+    
+    internal func allChildren() -> [Item] {
+        switch self {
+        case let .item(item, right: right, down: down):
+            return [item] + right.allChildren() + down.allChildren()
+        case .space:
+            return []
+        }
+    }
 }
