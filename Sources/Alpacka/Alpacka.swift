@@ -14,7 +14,7 @@ public enum Alpacka {
          - size: The container to arrange items within.
          - Returns: `.success([Item: CGPoint])` or `.overFlow([Item: CGPoint], overFlow: [Item])` depending on whether or not all items fit in the space using Alpacka's algorithm.
          */
-        public mutating func pack(_ items: [Item], in size: CGSize) -> Result {
+        public func pack(_ items: [Item], in size: CGSize) -> Result {
             var packed: Section<Item> = .space(Size(size))
             var overFlow = [Item]()
             items.lazy.sorted { first, second in
@@ -51,7 +51,7 @@ public enum Alpacka {
         packer.pack(&myItemArray, origin: \.origin, in: CGSize(width: 100, height: 100))
         */
         @discardableResult
-        public mutating func pack(_ items: inout [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize) -> Result {
+        public func pack(_ items: inout [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize) -> Result {
             let result = pack(items, in: size)
             var itemsToMutate = [Item: CGPoint]()
             switch result {
