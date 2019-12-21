@@ -5,43 +5,63 @@ public enum Alpacka {
     public struct Packer<Item> where Item: Hashable, Item: Sized {
         
         /**
-         Pack items into a containing area.
+         Packs items & applies the new origin to the `WritableKeyPath` that is provided.
          
-         Switch on result to check for overflow.
+         If any items do not fit this method will return the `.overFlow` result, containing a packed items associated value & an overFlow items associated value. These arrays will not have items in common. Check for overflow by switching on return value.
          
          - Parameters:
-         - items: Hashable, sized items that can be packed into a containing area.
-         - size: The container to arrange items within.
-         - Returns: `.success([Item: CGPoint])` or `.overFlow([Item: CGPoint], overFlow: [Item])` depending on whether or not all items fit in the space using Alpacka's algorithm.
-         */
-        public enum SortMethod {
-            case area
-            case height
-            case width
-            case perimeter
+           - items: Hashable, sized items to be packed into a containing area.
+           - origin: Writable keyPath of the origin on your items that you want to modify to arrange them.
+           - size: The container size to arrange items within.
+         
+         ```
+        var packer = Alpacka.Packer<MyItemType>()
+        let packedItems = packer.pack(myItemArray, origin: \.myItemOrigin, in: CGSize(width: 100, height: 100))
+        */
+        @discardableResult
+        public func pack(_ items: [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize) -> Result {
+            var items = items
+            let result = pack(items, in: size)
+            var itemsToMutate = [Item: CGPoint]()
+            itemsToMutate = result.packed
+            items = Array(Set(items).subtracting(Set(result.overFlow)))
+            items.updateEach { item in
+                guard let point = itemsToMutate[item] else { return }
+                item[keyPath: origin] = point
+            }
+            if result.overFlow.isEmpty {
+                return .success(items)
+            } else {
+                return .overFlow(items, overFlow: result.overFlow)
+            }
         }
-        public func pack(_ items: [Item], in size: CGSize, sorting: SortMethod = .height) -> Result {
+        
+        /// An asynchronous option for packing a higher number of objects.
+        /// - Parameters:
+        ///   - items: Hashable, sized items to be packed into a containing area.
+        ///   - origin: Writable keyPath of the origin on your items that you want to modify to arrange them.
+        ///   - size: The container size to arrange items within.
+        ///   - qos: The quality of service to use on the background thread where work will be performed. Defaults to `.default`.
+        ///   - completion: The code to execute when work is completed. This method will complete with `.success` normally or `.overFlow` if all items did not fit in the given container size.
+        public func pack(_ items: [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize, qos: DispatchQoS.QoSClass = .default, completion: @escaping (Result) -> ()) {
+            DispatchQueue.global(qos: qos).async {
+                completion(self.pack(items, origin: origin, in: size))
+            }
+        }
+
+        public init() {}
+        
+        public enum Result {
+            case success(_ packedItems: [Item])
+            case overFlow(_ packedItems: [Item], overFlow: [Item])
+        }
+        
+        internal func pack(_ items: [Item], in size: CGSize) -> (packed: [Item: CGPoint], overFlow: [Item]) {
             var packed: Section<Item> = .space(Size(size))
             var overFlow = [Item]()
             var added = [Item]()
-            var sorted = [Item]()
-            switch sorting {
-            case .area:
-                sorted = items.sorted {
-                    $0.size.height * $0.size.width > $1.size.height * $1.size.width
-                }
-            case .height:
-                sorted = items.sorted {
-                    $0.size.height > $1.size.height
-                }
-            case .width:
-                sorted = items.sorted {
-                    $0.size.width > $1.size.width
-                }
-            case .perimeter:
-                sorted = items.sorted {
-                    $0.size.width + $0.size.height > $1.size.width + $1.size.height
-                }
+            let sorted = items.sorted {
+                $0.size.height > $1.size.height
             }
             for (item, index) in zip(sorted, sorted.indices) {
                 guard let attempt = packed.traverseAndPlace(item) else {
@@ -61,53 +81,7 @@ public enum Alpacka {
                 dict[next] = origin.cgPoint
                 return dict
             }
-            if overFlow.isEmpty {
-                return .success(packedDict)
-            } else {
-                return .overFlow(packedDict, overFlow: overFlow)
-            }
-        }
-        
-        /**
-         Automatically applies new origin to items after packing & REMOVES items that did not fit from array.
-         
-         Check for overflow by switching on return value.
-         
-         - Parameters:
-           - items: Hashable, sized items that can be packed into a containing area.
-           - origin: Writable keyPath of the origin that you want to modify to arrange items.
-           - size: The container to arrange items within.
-         
-         ```
-        var packer = Alpacka.Packer<MyItemType>()
-        packer.pack(&myItemArray, origin: \.origin, in: CGSize(width: 100, height: 100))
-        */
-        @discardableResult
-        public func pack(_ items: inout [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize, sorting: SortMethod = .height) -> Result {
-            let result = pack(items, in: size, sorting: sorting)
-            var itemsToMutate = [Item: CGPoint]()
-            var overFlow = [Item]()
-            switch result {
-            case let .success(packed):
-                itemsToMutate = packed
-            case let .overFlow(packed, overFlow: over):
-                itemsToMutate = packed
-                overFlow = over
-            }
-            items = Array(Set(items).subtracting(Set(overFlow)))
-            items.updateEach { item in
-                guard let point = itemsToMutate[item] else { return }
-                item[keyPath: origin] = point
-            }
-            
-            return result
-        }
-        
-        public init() {}
-        
-        public enum Result {
-            case success(_ packedItems: [Item: CGPoint])
-            case overFlow(_ packedItems: [Item: CGPoint], overFlow: [Item])
+            return (packedDict, overFlow)
         }
     }
 }
