@@ -79,14 +79,6 @@ public enum Alpacka {
     }
 }
 
-extension MutableCollection {
-  mutating func updateEach(_ update: (inout Element) -> Void) {
-    for i in indices {
-      update(&self[i])
-    }
-  }
-}
-
 public func nut() {
     struct Thing: Hashable, Sized {
         var packingSize: CGSize {
