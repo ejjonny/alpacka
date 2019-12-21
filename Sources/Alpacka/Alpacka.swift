@@ -39,7 +39,7 @@ public enum Alpacka {
         }
         
         /**
-         Automatically applies new origin to items after packing.
+         Automatically applies new origin to items after packing & REMOVES items that did not fit from array.
          
          Check for overflow by switching on return value.
          
@@ -56,14 +56,17 @@ public enum Alpacka {
         public func pack(_ items: inout [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize) -> Result {
             let result = pack(items, in: size)
             var itemsToMutate = [Item: CGPoint]()
+            var overFlow = [Item]()
             switch result {
             case let .success(packed):
                 itemsToMutate = packed
-            case let .overFlow(packed, overFlow: _):
+            case let .overFlow(packed, overFlow: over):
                 itemsToMutate = packed
+                overFlow = over
             }
+            overFlow.forEach { items.remove(at: items.firstIndex(of: $0)!) }
             items.updateEach { item in
-                guard let point  = itemsToMutate[item] else { return }
+                guard let point = itemsToMutate[item] else { return }
                 item[keyPath: origin] = point
             }
             
