@@ -14,12 +14,34 @@ public enum Alpacka {
          - size: The container to arrange items within.
          - Returns: `.success([Item: CGPoint])` or `.overFlow([Item: CGPoint], overFlow: [Item])` depending on whether or not all items fit in the space using Alpacka's algorithm.
          */
-        public func pack(_ items: [Item], in size: CGSize) -> Result {
+        public enum SortMethod {
+            case area
+            case height
+            case width
+            case perimeter
+        }
+        public func pack(_ items: [Item], in size: CGSize, sorting: SortMethod = .height) -> Result {
             var packed: Section<Item> = .space(Size(size))
             var overFlow = [Item]()
             var added = [Item]()
-            let sorted = items.sorted { first, second in
-                first.size.height > second.size.height
+            var sorted = [Item]()
+            switch sorting {
+            case .area:
+                sorted = items.sorted {
+                    $0.size.height * $0.size.width > $1.size.height * $1.size.width
+                }
+            case .height:
+                sorted = items.sorted {
+                    $0.size.height > $1.size.height
+                }
+            case .width:
+                sorted = items.sorted {
+                    $0.size.width > $1.size.width
+                }
+            case .perimeter:
+                sorted = items.sorted {
+                    $0.size.width + $0.size.height > $1.size.width + $1.size.height
+                }
             }
             for (item, index) in zip(sorted, sorted.indices) {
                 guard let attempt = packed.traverseAndPlace(item) else {
@@ -61,8 +83,8 @@ public enum Alpacka {
         packer.pack(&myItemArray, origin: \.origin, in: CGSize(width: 100, height: 100))
         */
         @discardableResult
-        public func pack(_ items: inout [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize) -> Result {
-            let result = pack(items, in: size)
+        public func pack(_ items: inout [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize, sorting: SortMethod = .height) -> Result {
+            let result = pack(items, in: size, sorting: sorting)
             var itemsToMutate = [Item: CGPoint]()
             var overFlow = [Item]()
             switch result {
