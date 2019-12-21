@@ -1,106 +1,108 @@
 import UIKit
 
-private indirect enum Section<Item> where Item: Hashable, Item: Sized {
-    case item(_: Item, right: Section<Item>, down: Section<Item>)
-    case space(_: Size)
+public enum Alpacka {
+    /** An object for packing items into a containing area.
+     
+     ```
+     let packer = Packer<MyObjectThatConformsToSized>()
+     packer.pack()
+     
+     ```
+     */
     
-    func traverseAndPlace(_ item: Item) -> Section<Item>? {
-        switch self {
-        case let .item(currentItem, right: right, down: down):
-            if let placedRight = right.traverseAndPlace(item) {
-                return .item(currentItem, right: placedRight, down: down)
+    public struct Packer<Item> where Item: Hashable, Item: Sized {
+        /// Pack items into a containing area.
+        ///
+        /// Overflowing items will be added to the `.overFlow` property. Calling `pack(_:in:)` will clear this overflow array so store anything that you need to keep track of, or make a new `Packer` object before attempting to pack again.
+        /// - Parameters:
+        ///   - items: Hashable, sized items that can be packed into a containing area.
+        ///   - size: The container to arrange items within.
+        /// - Returns: A dictionary with your items as keys, and their proposed origin relative to the container.
+        public mutating func pack(_ items: [Item], in size: CGSize) -> Result {
+            var packed: Section<Item> = .space(Size(size))
+            var overFlow = [Item]()
+            items.lazy.sorted { first, second in
+                first.size.height > second.size.height
+            }.forEach { item in
+                guard let attempt = packed.traverseAndPlace(item) else { overFlow.append(item) ; return }
+                packed = attempt
             }
-            if let placedDown = down.traverseAndPlace(item) {
-                return .item(currentItem, right: right, down: placedDown)
+            let packedDict = items.reduce([Item: CGPoint]()) { current, next in
+                guard let origin = packed.origin(next) else { assert(false) ; return current }
+                var dict = current
+                dict[next] = origin.cgPoint
+                return dict
             }
-        case let .space(_: size):
-            if size.fits(item.size) {
-                return place(item)
+            if overFlow.isEmpty {
+                return .success(packedDict)
+            } else {
+                return .overFlow(packedDict, overFlow: overFlow)
             }
         }
-        return nil
-    }
-    
-    private func place<Item: Sized>(_ item: Item) -> Section<Item> {
-        guard case let .space(size) = self else { fatalError() }
-        return .item(item,
-                     right: .space(Size(w: Double(size.width) - item.size.width, h: item.size.height)),
-                     down: .space(Size(w: size.width, h: size.height - item.size.height)))
-    }
-    
-    private func origin(_ item: Item, rightDistance: Double = 0, downDistance: Double = 0) -> Point? {
-        switch self {
-        case let .item(currentItem, right: right, down: down):
-            if currentItem == item {
-                return Point(x: rightDistance, y: downDistance)
+        
+        /**
+         Automatically applies new origin to items after packing.
+         
+         Check for overflow by switching on return value.
+         
+         - Parameters:
+           - items: Hashable, sized items that can be packed into a containing area.
+           - origin: Writable keyPath of the origin that you want to modify to arrange items.
+           - size: The container to arrange items within.
+         
+         ```
+        var packer = Alpacka.Packer<MyItemType>()
+        packer.pack(&myItemArray, origin: \.origin, in: CGSize(width: 100, height: 100))
+        */
+        @discardableResult
+        public mutating func pack(_ items: inout [Item], origin: WritableKeyPath<Item, CGPoint>, in size: CGSize) -> Result {
+            let result = pack(items, in: size)
+            var itemsToMutate = [Item: CGPoint]()
+            switch result {
+            case let .success(packed):
+                itemsToMutate = packed
+            case let .overFlow(packed, overFlow: _):
+                itemsToMutate = packed
             }
-            if let origin = right.origin(item, rightDistance: rightDistance + currentItem.size.width, downDistance: downDistance) {
-                return origin
+            items.updateEach { item in
+                guard let point  = itemsToMutate[item] else { return }
+                item[keyPath: origin] = point
             }
-            if let origin = down.origin(item, rightDistance: rightDistance, downDistance: downDistance + currentItem.size.height) {
-                return origin
-            }
-        case .space:
-            return nil
+            
+            return result
         }
-        return nil
-    }
-    
-    public func pack(_ items: [Item]) -> [Item: CGPoint]? {
-        var packed: Section<Item>? = self
-        for item in items {
-            guard let attempt = packed?.traverseAndPlace(item) else { print("FUCK") ; continue }
-            packed = attempt
+        
+        public enum Result {
+            case success(_ packedItems: [Item: CGPoint])
+            case overFlow(_ packedItems: [Item: CGPoint], overFlow: [Item])
         }
-        guard let pack = packed else { return nil }
-        var dict = [Item: CGPoint]()
-        for item in items {
-            guard let origin = pack.origin(item) else { print("FAIL") ; continue }
-            dict[item] = origin.cgPoint
-        }
-        return dict
     }
 }
 
-/// Conform to `Sized` by providing a `packingSize` property to an object.
-public protocol Sized {
-    var packingSize: CGSize { get }
-}
-extension Sized {
-    fileprivate var size: Size {
-        Size(packingSize)
+extension MutableCollection {
+  mutating func updateEach(_ update: (inout Element) -> Void) {
+    for i in indices {
+      update(&self[i])
     }
+  }
 }
 
-/// A simple size representation that uses all `Double` properties.
-fileprivate struct Size {
-    let width: Double
-    let height: Double
-    init(_ size: CGSize) {
-        width = Double(size.width)
-        height = Double(size.height)
-    }
-    init(w: Double, h: Double) {
-        width = w
-        height = h
-    }
-    public func fits(_ size: Size) -> Bool {
-        return size.height <= self.height && size.width <= self.width
-    }
-}
+public func nut() {
+    struct Thing: Hashable, Sized {
+        var packingSize: CGSize {
+            return CGSize(width: 0, height: 0)
+        }
+        var origin: CGPoint = CGPoint(x: 0, y: 0)
 
-fileprivate struct Point {
-    let x: Double
-    let y: Double
-    var cgPoint: CGPoint {
-        CGPoint(x: x, y: y)
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(origin.x)
+            hasher.combine(origin.y)
+        }
     }
-    init(_ point: CGPoint) {
-        x = Double(point.x)
-        y = Double(point.y)
-    }
-    init(x: Double, y: Double) {
-        self.x = x
-        self.y = y
-    }
+    var items = [
+        Thing(),
+        Thing()
+    ]
+    var packer = Alpacka.Packer<Thing>()
+    packer.pack(&items, origin: \.origin, in: CGSize(width: 100, height: 100))
 }
