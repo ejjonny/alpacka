@@ -1,3 +1,3 @@
 # Alpacka
 
-A tiny packing package
+A lightweight Swift package built for simple 2D bin packing on iOS.
