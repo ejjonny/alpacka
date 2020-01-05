@@ -33,3 +33,5 @@ A lightweight Swift package built for simple 2D bin packing on iOS.
           // Do something with packed objects
         }
 ```
+
+[See an example app built with SwiftUI here](https://github.com/ejjonny/alpackaVisualizer)
