@@ -1,4 +1,8 @@
-import UIKit
+#if os(macOS)
+    import AppKit
+#elseif os(iOS)
+    import UIKit
+#endif
 
 public enum Alpacka {
     /// An object for packing items into a containing area.

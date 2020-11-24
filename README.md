@@ -1,6 +1,6 @@
 # Alpacka
 
-A lightweight Swift package built for simple 2D bin packing on iOS.
+A lightweight Swift package built for simple 2D bin packing on iOS and macOS.
 
 # Adding & Using this Package:
 1. Add Alpacka to your Xcode Project. 
