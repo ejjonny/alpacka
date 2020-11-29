@@ -5,7 +5,11 @@
 //  Created by Ethan John on 12/20/19.
 //
 
-import UIKit
+#if os(macOS)
+    import AppKit
+#elseif os(iOS)
+    import UIKit
+#endif
 
 /// A simple size representation that uses all `Double` properties.
 internal struct Size {
