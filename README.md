@@ -6,32 +6,27 @@ A lightweight Swift package built for simple 2D bin packing on iOS and macOS.
 1. Add Alpacka to your Xcode Project. 
   * File > Swift Packages > Add Package Dependency...
   * Paste repo URL https://github.com/ejjonny/alpacka
-  * Select a version, a commit, or a branch (I recommend the most recent release. For example: exact version '3.0.0-beta')
-2. Conform / adopt to the `Sized` protocol by simply providing a packing size property. This is the size that Alpacka will use to arrange your objects. **Your object will also need to conform to Hashable if it doesn't already.** A computed property based on existing properties is ideal so that you can avoid managing additional state.
+  * Select a version, a commit, or a branch (I recommend the most recent release. For example: exact version '1.0.0')
+2. Conform / adopt to the `Sized` protocol by providing a packing size property. This is the size that Alpacka will use to arrange your objects. **Your object will also need to conform to Hashable if it doesn't already.** A computed property based on existing properties is ideal so that you can avoid managing additional state.
 ```swift
-    var packingSize: CGSize {
-        CGSize(width: width, height: height)
-    }
+// Conforming to `Sized`
+var packingSize: Alpacka.Size {
+    .init(CGSize(width: width, height: height))
+}
 ```
-3. Initialize a `Packer` object & use either the async method or the synchronous `.pack` methods depending on your needs.
+3. Use the static  `Alpacka.pack` method to attempt to pack objects in the provided size.
 ```swift
-// Async (for bigger operations with more objects)
-        Alpacka.Packer().pack(objects, origin: \.origin, in: CGSize(width: 400, height: 400)) { result in
-            switch result {
-            case let .overFlow(packed, overFlow: overFlow):
-              // Do something with packed objects & the objects that didn't fit (if you want)
-            case let .success(packed):
-              // Do something with packed objects
-            }
-        }
-// Synchronous (only recommended for quick operations with very few objects)
-        let result = Alpacka.Packer().pack(objects, origin: \.origin, in: CGSize(width: 400, height: 400))
+// Packing objects
+Alpacka.pack(objects, origin: \.origin, in: .init(w: 400, h: 400))
+    .sink { result in
         switch result {
         case let .overFlow(packed, overFlow: overFlow):
-          // Do something with packed objects & the objects that didn't fit (if you want)
-        case let .success(packed):
-          // Do something with packed objects
+            // Do something with packed objects & the objects that didn't fit (if you want)
+        case let .packed(items):
+            // Do something with packed objects
         }
+    }
+    .store(in: &cancellables)
 ```
 
 [See an example app built with SwiftUI here](https://github.com/ejjonny/alpackaVisualizer)
