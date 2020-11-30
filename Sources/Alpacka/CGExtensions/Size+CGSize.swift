@@ -12,14 +12,14 @@
 #endif
 
 extension Alpacka.Size {
-    init(_ size: CGSize) {
+    public init(_ size: CGSize) {
         width = Double(size.width)
         height = Double(size.height)
     }
 }
 
 extension CGSize {
-    init(_ size: Alpacka.Size) {
+    public init(_ size: Alpacka.Size) {
         self.init(width: size.width, height: size.height)
     }
 }
