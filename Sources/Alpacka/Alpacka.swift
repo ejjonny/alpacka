@@ -2,33 +2,46 @@
 import Combine
 import Foundation
 
+/// Alpacka namespace. Use static method `Alpacka.pack`.
 public enum Alpacka {
-    struct OriginKeyPath<Item, OriginCoordinate> where Item: Hashable, Item: Sized {
-        let x: WritableKeyPath<Item, OriginCoordinate>
-        let y: WritableKeyPath<Item, OriginCoordinate>
-    }
+    /**
+     Packs items within the provided container & applies the new origin to the `WritableKeyPath` that is provided.
+     
+     If any items do not fit this method will return the `.overFlow` result (not an error), containing a packed items associated value & an overFlow items associated value. These arrays will not have items in common. Check for overflow by switching on return value. _Note that the result is not stable. Calling pack twice with the same input will not produce the same result._
+     
+     - parameter items: Hashable, sized items to be packed into a containing area.
+     - parameter origin: A `WritableKeyPath` of the origin property on the items that Alpacka can modify to arrange the items. The type of this keypath must conform to `OriginConvertible`. _Alpacka adds UIKit / AppKit CGPoint conformance to this protocol._
+     - parameter size: The container size to arrange items within.
+     - Returns: A publisher that publishes the result of the packing attempt. *(This is a deferred publisher that will be subscribed to on DispatchQueue.global(qos: default). The result will be calculated when a subscriber requests a value.)*
+     
+     ```
+     Alpacka.pack(myItemArray, origin: \.myItemOrigin, in: .init(w: 100, h: 100))
+     .sink { result in
+     // Check for overflow & proceed with arranged items here.
+     }
+     .store(in: &cancellables)
+     */
     public static func pack<Item, Origin>(_ items: [Item], origin: WritableKeyPath<Item, Origin>, in size: Size) -> AnyPublisher<Result<Item>, Never> where Item: Hashable, Item: Sized, Origin: OriginConvertible {
         pack(items, origin: origin, in: size, scheduler: DispatchQueue.global(qos: .default))
     }
     /**
-     Packs items & applies the new origin to the `WritableKeyPath` that is provided.
+     Packs items within the provided container & applies the new origin to the `WritableKeyPath` that is provided.
      
-     If any items do not fit this method will return the `.overFlow` result, containing a packed items associated value & an overFlow items associated value. These arrays will not have items in common. Check for overflow by switching on return value.
+     If any items do not fit this method will return the `.overFlow` result (not an error), containing a packed items associated value & an overFlow items associated value. These arrays will not have items in common. Check for overflow by switching on return value. _Note that the result is not stable. Calling pack twice with the same input will not produce the same result._
      
-     - Parameters:
-     - items: Hashable, sized items to be packed into a containing area.
-     - origin: Writable keyPath of the origin on your items that can be modified to arrage your items. The type must conform to OriginConvertible.
-     - size: The container size to arrange items within.
-     - scheduler: The scheduler to perform work on. This can be omitted to use the default background queue. (`DispatchQueue.global(qos: .default)`)
+     - parameter items: Hashable, sized items to be packed into a containing area.
+     - parameter origin: A `WritableKeyPath` of the origin property on the items that Alpacka can modify to arrange the items. The type of this keypath must conform to `OriginConvertible`. _Alpacka adds UIKit / AppKit CGPoint conformance to this protocol._
+     - parameter size: The container size to arrange items within.
+     - parameter scheduler: The scheduler to perform work on. _This parameter can be omitted to use the default background queue. (DispatchQueue.global(qos: .default))_
+     - Returns: A publisher that publishes the result of the packing attempt. *(This is a deferred publisher that will be subscribed to on the specified scheduler. The result will be calculated when a subscriber requests a value.)*
      
      ```
-     Alpacka.pack(myItemArray, origin: \.myItemOrigin, in: CGSize(width: 100, height: 100))
-        .sink { result in
-            // Check for overflow & proceed with arranged items here.
-        }
-        .store(in: &cancellables)
+     Alpacka.pack(myItemArray, origin: \.myItemOrigin, in: .init(w: 100, h: 100))
+     .sink { result in
+     // Check for overflow & proceed with arranged items here.
+     }
+     .store(in: &cancellables)
      */
-    @discardableResult
     public static func pack<Item, Origin, T: Scheduler>(_ items: [Item], origin: WritableKeyPath<Item, Origin>, in size: Size, scheduler: T) -> AnyPublisher<Result<Item>, Never> where Item: Hashable, Item: Sized, Origin: OriginConvertible {
         Deferred {
             Future<Result<Item>, Never> { promise in
@@ -52,14 +65,9 @@ public enum Alpacka {
         .eraseToAnyPublisher()
     }
     
-    /// An asynchronous option for packing a higher number of objects.
-    /// - Parameters:
-    ///   - items: Hashable, sized items to be packed into a containing area.
-    ///   - origin: Writable keyPath of the origin on your items that you want to modify to arrange them.
-    ///   - size: The container size to arrange items within.
-    ///   - qos: The quality of service to use on the background thread where work will be performed. Defaults to `.default`.
-    ///   - completion: The code to execute when work is completed. This method will complete with `.success` normally or `.overFlow` if all items did not fit in the given container size.
-    
+    /// The result of a packing attempt.
+    ///
+    /// Either every item was successfully packed into the container or a number of items did not fit.
     public enum Result<Item> where Item: Hashable, Item: Sized {
         case packed(_ packedItems: [Item])
         case overFlow(_ packedItems: [Item], overFlow: [Item])
@@ -70,7 +78,7 @@ public enum Alpacka {
         var overFlow = [Item]()
         var added = [Item]()
         let sorted = items.sorted {
-            $0.size.height > $1.size.height
+            $0.size.height > $1.size.height && $0.hashValue > $1.hashValue
         }
         for (item, index) in zip(sorted, sorted.indices) {
             guard let attempt = packed.traverseAndPlace(item) else {

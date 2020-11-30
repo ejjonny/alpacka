@@ -74,7 +74,7 @@ final class AlpackaTests: XCTestCase {
     
     func generateRandomItems(count: Int) -> [Thing] {
         var things = [Thing]()
-        for _ in 0...count {
+        for _ in 0..<count {
             things.append(Thing(size: CGSize(width: Double.random(in: 1...30), height: Double.random(in: 1...30))))
         }
         return things
