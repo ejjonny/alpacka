@@ -7,9 +7,9 @@
 
 extension Alpacka {
     public struct Point {
-        let x: Double
-        let y: Double
-        init(x: Double, y: Double) {
+        public let x: Double
+        public let y: Double
+        public init(x: Double, y: Double) {
             self.x = x
             self.y = y
         }

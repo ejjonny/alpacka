@@ -8,16 +8,16 @@
 extension Alpacka {
     /// A simple size representation that uses all `Double` properties.
     public struct Size {
-        let width: Double
-        let height: Double
+        public let width: Double
+        public let height: Double
         var area: Double {
             width * height
         }
-        init(w: Double, h: Double) {
+        public init(w: Double, h: Double) {
             width = w
             height = h
         }
-        public func fits(_ size: Size) -> Bool {
+        func fits(_ size: Size) -> Bool {
             return size.height <= self.height && size.width <= self.width
         }
     }
